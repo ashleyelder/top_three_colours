@@ -17,7 +17,6 @@ import (
 var results []string
 
 func readUrls(fileInput string, urls []string) {
-
 	f, err := os.Open(fileInput)
 
 	if err != nil {
@@ -48,7 +47,6 @@ func readUrls(fileInput string, urls []string) {
 }
 
 func loadImage(url string) (image.Image, error) {
-
 	response, err := http.Get(url)
 
 	if err != nil {
@@ -65,7 +63,6 @@ func loadImage(url string) (image.Image, error) {
 }
 
 func getThreePrevalentColor(image image.Image, url string) {
-
 	colours, err := prominentcolor.Kmeans(image)
 
 	checkError("Cannot get colours", err)
@@ -85,7 +82,6 @@ func getThreePrevalentColor(image image.Image, url string) {
 }
 
 func createAndWriteCSV() {
-
 	file, err := os.Create("result.csv")
 	checkError("Cannot create file", err)
 	defer file.Close()
@@ -93,8 +89,7 @@ func createAndWriteCSV() {
 	writeCSV(file)
 }
 
-func writeCSV(file *os.File) {
-
+func writeCSV(file *os.File) (message string, err error) {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
@@ -105,17 +100,16 @@ func writeCSV(file *os.File) {
 			log.Fatalln("Failed to write data:", err)
 		}
 	}
+	return message, nil
 }
 
 func checkError(message string, err error) {
-
 	if err != nil {
 		log.Fatal(message, err)
 	}
 }
 
 func main() {
-
 	var filename = "input.txt"
 
 	// creates dynamic array
