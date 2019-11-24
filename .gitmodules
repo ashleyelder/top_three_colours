@@ -1,0 +1,15 @@
+[submodule "vendor/github.com/EdlinOrg/prominentcolor"]
+	path = vendor/github.com/EdlinOrg/prominentcolor
+	url = https://github.com/EdlinOrg/prominentcolor
+[submodule "vendor/github.com/github.com/lucasb-eyer/go-colorful"]
+	path = vendor/github.com/github.com/lucasb-eyer/go-colorful
+	url = https://github.com/lucasb-eyer/go-colorful
+[submodule "vendor/github.com/lucasb-eyer/go-colorful"]
+	path = vendor/github.com/lucasb-eyer/go-colorful
+	url = https://github.com/lucasb-eyer/go-colorful
+[submodule "vendor/github.com/nfnt/resize"]
+	path = vendor/github.com/nfnt/resize
+	url = https://github.com/nfnt/resize
+[submodule "vendor/github.com/oliamb/cutter"]
+	path = vendor/github.com/oliamb/cutter
+	url = https://github.com/oliamb/cutter
