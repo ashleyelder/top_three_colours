@@ -2,10 +2,12 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/csv"
 	"fmt"
 	"image"
 	_ "image/jpeg"
+	// "io"
 	"log"
 	"net/http"
 	"os"
@@ -17,11 +19,10 @@ import (
 var results []string
 
 func readUrls(fileInput string, urls []string) {
+	var b bytes.Buffer
 	f, err := os.Open(fileInput)
 
-	if err != nil {
-		log.Fatalln("Failure opening file:", err)
-	}
+	checkError(&b, err)
 
 	defer f.Close()
 
@@ -37,9 +38,11 @@ func readUrls(fileInput string, urls []string) {
 		img, err := loadImage(urls[i])
 
 		if err != nil {
-			fmt.Println(err)
+			// fmt.Println(err)
+			checkError(&b, err)
 			continue
 		}
+		// checkError(&b, err)
 
 		getThreePrevalentColor(img, urls[i])
 
@@ -63,9 +66,11 @@ func loadImage(url string) (image.Image, error) {
 }
 
 func getThreePrevalentColor(image image.Image, url string) {
+	var b bytes.Buffer
 	colours, err := prominentcolor.Kmeans(image)
 
-	checkError("Cannot get colours", err)
+	// pass reference to buffer instead of buffer itself
+	checkError(&b, err)
 
 	var result strings.Builder
 	result.WriteString(url)
@@ -82,8 +87,10 @@ func getThreePrevalentColor(image image.Image, url string) {
 }
 
 func createAndWriteCSV() {
+	var b bytes.Buffer
 	file, err := os.Create("result.csv")
-	checkError("Cannot create file", err)
+
+	checkError(&b, err)
 	defer file.Close()
 
 	writeCSV(file)
@@ -103,10 +110,12 @@ func writeCSV(file *os.File) (message string, err error) {
 	return message, nil
 }
 
-func checkError(message string, err error) {
+// err error
+func checkError(writer *bytes.Buffer, err error) (message string, error error) {
 	if err != nil {
-		log.Fatal(message, err)
+		fmt.Fprintf(os.Stderr, "Error %s\n", err.Error())
 	}
+	return message, nil
 }
 
 func main() {

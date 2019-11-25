@@ -13,3 +13,9 @@
 [submodule "vendor/github.com/oliamb/cutter"]
 	path = vendor/github.com/oliamb/cutter
 	url = https://github.com/oliamb/cutter
+[submodule "github.com/stretchr/testify"]
+	path = github.com/stretchr/testify
+	url = https://github.com/stretchr/testify
+[submodule "vendor/github.com/stretchr/testify"]
+	path = vendor/github.com/stretchr/testify
+	url = https://github.com/stretchr/testify
