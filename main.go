@@ -7,8 +7,7 @@ import (
 	"fmt"
 	"image"
 	_ "image/jpeg"
-	// "io"
-	"log"
+	// "log"
 	"net/http"
 	"os"
 	"strings"
@@ -38,23 +37,20 @@ func readUrls(fileInput string, urls []string) {
 		img, err := loadImage(urls[i])
 
 		if err != nil {
-			// fmt.Println(err)
 			checkError(&b, err)
 			continue
 		}
-		// checkError(&b, err)
 
-		getThreePrevalentColor(img, urls[i])
+		getThreePrevalentColours(img, urls[i])
 
 	}
 }
 
 func loadImage(url string) (image.Image, error) {
+	var b bytes.Buffer
 	response, err := http.Get(url)
 
-	if err != nil {
-		log.Fatalf("http.Get -> %v", err)
-	}
+	checkError(&b, err)
 	defer response.Body.Close()
 
 	img, _, err := image.Decode(response.Body)
@@ -65,13 +61,17 @@ func loadImage(url string) (image.Image, error) {
 	return img, nil
 }
 
-func getThreePrevalentColor(image image.Image, url string) {
+func getThreePrevalentColours(image image.Image, url string) {
 	var b bytes.Buffer
 	colours, err := prominentcolor.Kmeans(image)
 
 	// pass reference to buffer instead of buffer itself
 	checkError(&b, err)
 
+	assembleLineItem(colours, url)
+}
+
+func assembleLineItem(colours []prominentcolor.ColorItem, url string) {
 	var result strings.Builder
 	result.WriteString(url)
 
@@ -83,7 +83,6 @@ func getThreePrevalentColor(image image.Image, url string) {
 	s := result.String()
 
 	results = append(results, s)
-
 }
 
 func createAndWriteCSV() {
@@ -97,20 +96,18 @@ func createAndWriteCSV() {
 }
 
 func writeCSV(file *os.File) (message string, err error) {
+	var b bytes.Buffer
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
 	for index, lineItem := range results {
 		fmt.Println(index, "=>", lineItem)
 		_, err := file.WriteString(lineItem)
-		if err != nil {
-			log.Fatalln("Failed to write data:", err)
-		}
+		checkError(&b, err)
 	}
 	return message, nil
 }
 
-// err error
 func checkError(writer *bytes.Buffer, err error) (message string, error error) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error %s\n", err.Error())
