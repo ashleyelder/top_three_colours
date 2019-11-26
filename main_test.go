@@ -56,7 +56,7 @@ func testTempFile(t *testing.T) (*os.File, func()) {
 
 	tf.Close()
 
-	// as cleanup returns closure that deletes the temp file
+	// as cleanup returns closure/func literal/anonymous func that deletes the temp file
 	return tf, func() { os.Remove(tf.Name()) }
 }
 
@@ -75,7 +75,7 @@ func TestWriteCSV(t *testing.T) {
 }
 
 func TestLoadImage(t *testing.T) {
-	// load valid images of cute gophers
+	// load valid images
 	validTests := []struct {
 		url string
 	}{
@@ -86,7 +86,7 @@ func TestLoadImage(t *testing.T) {
 	for _, test := range validTests {
 		result, err := loadImage(test.url)
 
-		// assert there there is a result - not testing actual decode function so not checking for an image specifically
+		// assert there is a result - not testing actual decode function so not checking for an image specifically
 		assert.NotNil(t, result)
 
 		// assert there is no error
