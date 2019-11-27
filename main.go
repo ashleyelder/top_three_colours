@@ -14,10 +14,10 @@ import (
 	// "time"
 )
 
-// makes global because difficulty accessing in readUrls and then processUrls (which isn't called from readUrls)
-var urls = make(chan string)
+var urls = make(chan string, 10)
+var results = make(chan image.Image, 10)
 
-func readUrls(fileInput string, results chan string) {
+func readUrls(fileInput string) {
 	fmt.Println("readUrls")
 	var b bytes.Buffer
 
@@ -33,67 +33,68 @@ func readUrls(fileInput string, results chan string) {
 		url := scanner.Text()
 		urls <- url
 	}
+	close(urls)
 }
 
-func processUrls(results chan string) {
-	fmt.Println("processUrls")
-	var b bytes.Buffer
+// func processUrls(results chan string) {
+// 	fmt.Println("processUrls")
+// 	var b bytes.Buffer
 
-	for url := range urls {
-		fmt.Println(url)
-		img, err := loadImage(url)
+// 	for url := range urls {
+// 		fmt.Println(url)
+// 		img, err := loadImage(url)
 
-		if err != nil {
-			checkError(&b, err)
-			fmt.Println(img)
-			continue
-		}
+// 		if err != nil {
+// 			checkError(&b, err)
+// 			fmt.Println(img)
+// 			continue
+// 		}
 
-		getThreePrevalentColours(img, url, results)
-	}
-}
+// 		getThreePrevalentColours(img, url, results)
+// 	}
+// }
 
-func loadImage(url string) (image.Image, error) {
-	fmt.Println("loadImage")
-	var b bytes.Buffer
-	response, err := http.Get(url)
+// func loadImage(url string) (image.Image, error) {
+// 	fmt.Println("loadImage")
+// 	var b bytes.Buffer
+// 	response, err := http.Get(url)
 
-	checkError(&b, err)
-	defer response.Body.Close()
+// 	checkError(&b, err)
+// 	defer response.Body.Close()
 
-	img, _, err := image.Decode(response.Body)
-	if err != nil {
-		return nil, err
-	}
+// 	img, _, err := image.Decode(response.Body)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	return img, nil
-}
+// 	return img, nil
+// }
 
-func getThreePrevalentColours(image image.Image, url string, results chan string) {
-	fmt.Println("getThreePrevalentColours")
-	var b bytes.Buffer
-	colours, err := prominentcolor.Kmeans(image)
+// func getThreePrevalentColours(image image.Image, url string, results chan string) {
+// 	fmt.Println("getThreePrevalentColours")
+// 	var b bytes.Buffer
+// 	colours, err := prominentcolor.Kmeans(image)
 
-	// pass reference to buffer instead of buffer itself
-	checkError(&b, err)
+// 	// pass reference to buffer instead of buffer itself
+// 	checkError(&b, err)
 
-	assembleLineItem(colours, url, results)
-}
+// 	assembleLineItem(colours, url, results)
+// }
 
-func assembleLineItem(colours []prominentcolor.ColorItem, url string, results chan string) {
-	fmt.Println("assembleLineItem")
+// func assembleLineItem(colours []prominentcolor.ColorItem, url string, results chan string) {
+// 	fmt.Println("assembleLineItem")
 
-	// build a line item
-	var str strings.Builder
-	str.WriteString(url)
-	for _, colour := range colours {
-		str.WriteString(",#" + colour.AsString())
-	}
-	str.WriteString("\n")
-	lineItem := str.String()
+// 	// build a line item
+// 	var str strings.Builder
+// 	str.WriteString(url)
+// 	for _, colour := range colours {
+// 		str.WriteString(",#" + colour.AsString())
+// 	}
+// 	str.WriteString("\n")
+// 	lineItem := str.String()
 
-	results <- lineItem
-}
+// 	results <- lineItem
+// }
 
 // func createAndWriteCSV(results chan []string) {
 // 	var b bytes.Buffer
@@ -118,6 +119,34 @@ func assembleLineItem(colours []prominentcolor.ColorItem, url string, results ch
 // 	return message, nil
 // }
 
+func worker(wg *sync.WaitGroup) {
+	for url := range urls {
+		fmt.Println(url)
+		// output := Result{url, digits(url.randomno)}
+		// img, err := loadImage(url)
+		// fmt.Println(err)
+		// results <- img
+	}
+	wg.Done()
+}
+
+func createWorkerPool(noOfWorkers int) {
+	var wg sync.WaitGroup
+	for i := 0; i < noOfWorkers; i++ {
+		wg.Add(1)
+		go worker(&wg)
+	}
+	wg.Wait()
+	close(results)
+}
+
+func result(done chan bool) {
+	for result := range results {
+		fmt.Printf("result function: ", result)
+	}
+	done <- true
+}
+
 func checkError(writer *bytes.Buffer, err error) (message string, error error) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error %s\n", err.Error())
@@ -126,17 +155,18 @@ func checkError(writer *bytes.Buffer, err error) (message string, error error) {
 }
 
 func main() {
-	res := make(chan string)
-
+	startTime := time.Now()
 	filename := "input.txt"
 
-	go readUrls(filename, res)
-	go processUrls(res)
-
-	s := <-res
-	fmt.Println("s", s)
-
-	fmt.Scanln()
-
+	go readUrls(filename)
+	done := make(chan bool)
+	go result(done)
+	noOfWorkers := 10
+	createWorkerPool(noOfWorkers)
+	<-done
+	endTime := time.Now()
+	diff := endTime.Sub(startTime)
+	fmt.Println("total time taken ", diff.Seconds(), "seconds")
+	// go processUrls()
 	// createAndWriteCSV(results)
 }
