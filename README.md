@@ -16,7 +16,10 @@ project goal.... and in order to display a wide range of skills this project inc
 
 #### Tech Stack
 
-- go1.12.4
+- go1.12.4:
+1. go supports concurrency instrinsic within the language
+2. compiled lnaguag, it converts to machine code so it is faster and more efficient to execute than an interpreted language like python
+3. nice and clean syntax unlike Java
 
 #### Other Tools
 
@@ -53,10 +56,15 @@ project goal.... and in order to display a wide range of skills this project inc
 
 Improve writing testable code and writing tests.
 
+Graceful error handling, for instance when there is an issue like an empty line at the end of the input.txt file. Instead of returning `panic: runtime error: invalid memory address or nil pointer dereference` it could return a custom error message. For the sake of making my code more DRY I simply passed each default error message to the single checkError helper method. 
+
 ---
 
 ## Challenges
 
+Synchronization
+
+At the basic level, goroutines are easy to implement and have separate running activities. But to get more complicated functionality and having them line up to communicate is more challenging.
 ---
 
 ## Learnings
@@ -67,24 +75,11 @@ It is very worth taking time to study the Go standard library. For example, fami
 
 ### Concurrency
 
+Originally this program was sequential and had two main functions, one that did some computation and one that wrote some output and neither function calls the other. to make this a concurrent program, calls to both functions are active at the same exact time. this models the real world.
+
 goroutines are independent activities executing in a concurrenct Go program
 
-channels allowe communication between goroutines
-
-- ch <- x //  sends x to channel ch
-- x = <-ch // x receives from ch
-- <-ch // a receive statement; result is discarded
-- close(ch) // no more values will be sent to this channel
-
-<!-- Note: Only the sender should close a channel, never the receiver. Sending on a closed channel will cause a panic.
-
-Another note: Channels aren't like files; you don't usually need to close them. Closing is only necessary when the receiver must be told there are no more values coming, such as to terminate a range loop. -->
-
-<!-- ^^^^ Channels should not be closed by their receiver because they don't know whether the sender is done sending. If the receiver closes a channel and the sender attempts to send again - the sender will panic. OTOH, if the sender closes the channel and receiver tries to read, the receiver reads nil.
-
-Ergo, you close channels to let the receiver know there will be no more data. -->
-
-originally this program was sequential and had two main functions, one that did some computation and one that wrote some output and neither function calls the other. to make this a concurrent program, calls to both functions are active at the same exact time.
+channels allow communication between goroutines
 
 ---
 
