@@ -110,7 +110,10 @@ func worker(wg *sync.WaitGroup) {
 	var b bytes.Buffer
 	for url := range urls {
 		img, err := loadImage(url)
-		checkError(&b, err)
+		if err != nil {
+			checkError(&b, err)
+			continue
+		}
 
 		getThreePrevalentColours(img, url)
 	}
