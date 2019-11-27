@@ -3,7 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
-	// // "encoding/csv"
+	"encoding/csv"
 	"fmt"
 	"github.com/EdlinOrg/prominentcolor"
 	"image"
@@ -11,11 +11,12 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	// "time"
+	"sync"
+	"time"
 )
 
 var urls = make(chan string, 10)
-var results = make(chan image.Image, 10)
+var results = make(chan string, 10)
 
 func readUrls(fileInput string) {
 	fmt.Println("readUrls")
@@ -36,101 +37,88 @@ func readUrls(fileInput string) {
 	close(urls)
 }
 
-// func processUrls(results chan string) {
-// 	fmt.Println("processUrls")
-// 	var b bytes.Buffer
+func loadImage(url string) (image.Image, error) {
+	fmt.Println("loadImage")
+	var b bytes.Buffer
+	response, err := http.Get(url)
 
-// 	for url := range urls {
-// 		fmt.Println(url)
-// 		img, err := loadImage(url)
+	checkError(&b, err)
+	defer response.Body.Close()
 
-// 		if err != nil {
-// 			checkError(&b, err)
-// 			fmt.Println(img)
-// 			continue
-// 		}
+	img, _, err := image.Decode(response.Body)
+	if err != nil {
+		return nil, err
+	}
 
-// 		getThreePrevalentColours(img, url, results)
-// 	}
-// }
+	return img, nil
+}
 
-// func loadImage(url string) (image.Image, error) {
-// 	fmt.Println("loadImage")
-// 	var b bytes.Buffer
-// 	response, err := http.Get(url)
+func getThreePrevalentColours(image image.Image, url string) {
+	fmt.Println("getThreePrevalentColours")
+	var b bytes.Buffer
+	colours, err := prominentcolor.Kmeans(image)
 
-// 	checkError(&b, err)
-// 	defer response.Body.Close()
+	// pass reference to buffer instead of buffer itself
+	checkError(&b, err)
+	assembleLineItem(colours, url)
+}
 
-// 	img, _, err := image.Decode(response.Body)
-// 	if err != nil {
-// 		return nil, err
-// 	}
+func assembleLineItem(colours []prominentcolor.ColorItem, url string) {
+	fmt.Println("assembleLineItem")
 
-// 	return img, nil
-// }
+	// build a line item
+	var str strings.Builder
+	str.WriteString(url)
+	for _, colour := range colours {
+		str.WriteString(",#" + colour.AsString())
+	}
+	str.WriteString("\n")
+	lineItem := str.String()
 
-// func getThreePrevalentColours(image image.Image, url string, results chan string) {
-// 	fmt.Println("getThreePrevalentColours")
-// 	var b bytes.Buffer
-// 	colours, err := prominentcolor.Kmeans(image)
+	results <- lineItem
+}
 
-// 	// pass reference to buffer instead of buffer itself
-// 	checkError(&b, err)
+func createAndWriteCSV(done chan bool) {
+	fmt.Println("createAndWriteCSV")
+	var b bytes.Buffer
+	file, err := os.Create("result.csv")
 
-// 	assembleLineItem(colours, url, results)
-// }
+	checkError(&b, err)
+	defer file.Close()
 
-// func assembleLineItem(colours []prominentcolor.ColorItem, url string, results chan string) {
-// 	fmt.Println("assembleLineItem")
+	writeCSV(file, done)
+}
 
-// 	// build a line item
-// 	var str strings.Builder
-// 	str.WriteString(url)
-// 	for _, colour := range colours {
-// 		str.WriteString(",#" + colour.AsString())
-// 	}
-// 	str.WriteString("\n")
-// 	lineItem := str.String()
+func writeCSV(file *os.File, done chan bool) (message string, err error) {
+	fmt.Println("writeCSV")
+	var b bytes.Buffer
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
 
-// 	results <- lineItem
-// }
+	for lineItem := range results {
+		_, err := file.WriteString(lineItem)
+		checkError(&b, err)
+	}
 
-// func createAndWriteCSV(results chan []string) {
-// 	var b bytes.Buffer
-// 	file, err := os.Create("result.csv")
+	done <- true
 
-// 	checkError(&b, err)
-// 	defer file.Close()
-
-// 	writeCSV(file, results)
-// }
-
-// func writeCSV(file *os.File, results chan []string) (message string, err error) {
-// 	var b bytes.Buffer
-// 	writer := csv.NewWriter(file)
-// 	defer writer.Flush()
-
-// 	for index, lineItem := range results {
-// 		fmt.Println(index, "=>", lineItem)
-// 		_, err := file.WriteString(lineItem)
-// 		checkError(&b, err)
-// 	}
-// 	return message, nil
-// }
+	return message, nil
+}
 
 func worker(wg *sync.WaitGroup) {
+	fmt.Println("worker")
+	var b bytes.Buffer
 	for url := range urls {
-		fmt.Println(url)
-		// output := Result{url, digits(url.randomno)}
-		// img, err := loadImage(url)
-		// fmt.Println(err)
-		// results <- img
+		img, err := loadImage(url)
+		checkError(&b, err)
+
+		getThreePrevalentColours(img, url)
 	}
 	wg.Done()
 }
 
 func createWorkerPool(noOfWorkers int) {
+	fmt.Println("createWorkerPool")
 	var wg sync.WaitGroup
 	for i := 0; i < noOfWorkers; i++ {
 		wg.Add(1)
@@ -138,13 +126,6 @@ func createWorkerPool(noOfWorkers int) {
 	}
 	wg.Wait()
 	close(results)
-}
-
-func result(done chan bool) {
-	for result := range results {
-		fmt.Printf("result function: ", result)
-	}
-	done <- true
 }
 
 func checkError(writer *bytes.Buffer, err error) (message string, error error) {
@@ -160,13 +141,14 @@ func main() {
 
 	go readUrls(filename)
 	done := make(chan bool)
-	go result(done)
+	go createAndWriteCSV(done)
+
 	noOfWorkers := 10
 	createWorkerPool(noOfWorkers)
+
 	<-done
+
 	endTime := time.Now()
 	diff := endTime.Sub(startTime)
 	fmt.Println("total time taken ", diff.Seconds(), "seconds")
-	// go processUrls()
-	// createAndWriteCSV(results)
 }
