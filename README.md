@@ -53,7 +53,7 @@ Project submission for [ code challenge](https://gist.github.com/ehmo/e736c827ca
 
 ## Improvements
 
-Improve writing testable code and writing tests.
+Improve writing testable code and writing tests. Benchmark tests to assess performance.
 
 Graceful error handling, for instance when there is an issue like an empty line at the end of the input.txt file. Instead of returning `panic: runtime error: invalid memory address or nil pointer dereference` it could return a custom error message. For the sake of making my code more DRY I simply passed each default error message to the single checkError helper method. 
 
@@ -65,6 +65,8 @@ Synchronization
 
 At the basic level, goroutines are easy to implement and have separate running activities. But to get more complicated functionality and having them line up to communicate is more challenging.
 
+Also, tests are executed as goroutines as well.
+
 ---
 
 ## Learnings
@@ -75,7 +77,7 @@ It is very worth taking time to study the Go standard library. For example, fami
 
 ### Concurrency
 
-Originally this program was sequential and had two main functions, one that did some computation and one that wrote some output and neither function calls the other. To make this a concurrent program, both functins are called and active at the same exact time. This models the real world.
+Originally this program was sequential and had two main functions, one that did some computation and one that wrote some output and neither function calls the other. To make this a concurrent program, both functions are called and active at the same exact time. This models the real world and is faster.
 
 ---
 

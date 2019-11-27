@@ -19,7 +19,6 @@ var urls = make(chan string, 10)
 var results = make(chan string, 10)
 
 func readUrls(fileInput string) {
-	fmt.Println("readUrls")
 	var b bytes.Buffer
 
 	f, err := os.Open(fileInput)
@@ -38,7 +37,6 @@ func readUrls(fileInput string) {
 }
 
 func loadImage(url string) (image.Image, error) {
-	fmt.Println("loadImage")
 	var b bytes.Buffer
 	response, err := http.Get(url)
 
@@ -54,7 +52,6 @@ func loadImage(url string) (image.Image, error) {
 }
 
 func getThreePrevalentColours(image image.Image, url string) {
-	fmt.Println("getThreePrevalentColours")
 	var b bytes.Buffer
 	colours, err := prominentcolor.Kmeans(image)
 
@@ -64,8 +61,6 @@ func getThreePrevalentColours(image image.Image, url string) {
 }
 
 func assembleLineItem(colours []prominentcolor.ColorItem, url string) {
-	fmt.Println("assembleLineItem")
-
 	// build a line item
 	var str strings.Builder
 	str.WriteString(url)
@@ -79,7 +74,6 @@ func assembleLineItem(colours []prominentcolor.ColorItem, url string) {
 }
 
 func createAndWriteCSV(done chan bool) {
-	fmt.Println("createAndWriteCSV")
 	var b bytes.Buffer
 	file, err := os.Create("result.csv")
 
@@ -90,7 +84,6 @@ func createAndWriteCSV(done chan bool) {
 }
 
 func writeCSV(file *os.File, done chan bool) (message string, err error) {
-	fmt.Println("writeCSV")
 	var b bytes.Buffer
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
@@ -106,7 +99,6 @@ func writeCSV(file *os.File, done chan bool) (message string, err error) {
 }
 
 func worker(wg *sync.WaitGroup) {
-	fmt.Println("worker")
 	var b bytes.Buffer
 	for url := range urls {
 		img, err := loadImage(url)
@@ -121,7 +113,6 @@ func worker(wg *sync.WaitGroup) {
 }
 
 func createWorkerPool(noOfWorkers int) {
-	fmt.Println("createWorkerPool")
 	var wg sync.WaitGroup
 	for i := 0; i < noOfWorkers; i++ {
 		wg.Add(1)
