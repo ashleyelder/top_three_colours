@@ -20,8 +20,8 @@ import (
 // urls will be sent to workers and results collected
 // sends to buffered channel are blocked when buffer is full - it is possible to write 10 urls into urls channel without being blocked
 // receives from buffered channel are blocked only when buffer is empty
-var urls = make(chan string, 20)
-var results = make(chan string, 20)
+var urls = make(chan string, 10)
+var results = make(chan string, 10)
 
 func readUrls(fileInput string) {
 	var b bytes.Buffer
@@ -30,6 +30,7 @@ func readUrls(fileInput string) {
 
 	checkError(&b, err)
 
+	// defer function call to the end of the currently executing function
 	defer f.Close()
 
 	scanner := bufio.NewScanner(f)
@@ -82,21 +83,20 @@ func assembleLineItem(colours []prominentcolor.ColorItem, url string) {
 	results <- lineItem
 }
 
-func createAndWriteCSV(done chan bool) {
+func createAndWriteCSV(wg *sync.WaitGroup) {
 	var b bytes.Buffer
 	file, err := os.Create("result.csv")
 
 	checkError(&b, err)
 	defer file.Close()
 
-	writeCSV(file, done)
+	writeCSV(file, wg)
 }
 
-func writeCSV(file *os.File, done chan bool) (message string, err error) {
-	fmt.Println("writeCSV executed")
+func writeCSV(file *os.File, wg *sync.WaitGroup) (message string, err error) {
 	var b bytes.Buffer
 	writer := csv.NewWriter(file)
-	// writer.flush - does it stop writing the file after all lineItems are written?
+	// writes any buffered data to the underlying io.Writer
 	defer writer.Flush()
 
 	for lineItem := range results {
@@ -104,7 +104,7 @@ func writeCSV(file *os.File, done chan bool) (message string, err error) {
 		checkError(&b, err)
 	}
 
-	done <- true
+	defer wg.Done()
 
 	return message, nil
 }
@@ -112,12 +112,10 @@ func writeCSV(file *os.File, done chan bool) (message string, err error) {
 // frequent creation of workers receive tasks on the url channel
 func worker(wg *sync.WaitGroup) {
 	var b bytes.Buffer
-	// a defer function to recover is a good idea here
-	// because any panics would otherwise crash the entire program
+	// a defer function to recover is a good idea here because any panics would otherwise crash the entire program
 	defer wg.Done()
 
-	// pull urls from queue until it's done/closed
-	// no need to check if channel is closed with ok variable
+	// pull urls from queue until it's done/closed so no need to check if channel is closed with ok variable
 	for url := range urls {
 		fmt.Println("concurrently read value", url, "from channel")
 		img, err := loadImage(url)
@@ -155,28 +153,20 @@ func checkError(writer *bytes.Buffer, err error) (message string, error error) {
 func main() {
 	startTime := time.Now()
 	filename := "input.txt"
+	var wg sync.WaitGroup
 
 	go readUrls(filename)
-	done := make(chan bool)
-	go createAndWriteCSV(done)
+	wg.Add(1)
+	go createAndWriteCSV(&wg)
 
-	// control the number of concurrently running tasks - hardcoded to be 10
+	// control the number of concurrently running tasks
 	// number is tuned to computing resources available, adjustable to optimize performance
-	noOfWorkers := 20
+	noOfWorkers := 10
 	createWorkerPool(noOfWorkers)
 
-	// receive data from the done bool channel, does not use or store it in a variable, which is legal
-	// blocking line of code: until a goroutine writes data to the done channel, the control will not move to the next line of code
-	// main goroutine is blocked since it is waiting for data from the done channel below
-	<-done
+	wg.Wait()
 
 	endTime := time.Now()
 	diff := endTime.Sub(startTime)
 	fmt.Println("total time taken ", diff.Seconds(), "seconds")
 }
-
-// try adding second wait group for done
-// try to make call to checkError concurrent: https://golangbot.com/channels/ - "We will move that code to its own function and call it concurrently..." - does this make my program run faster?
-// try playing around with the buffer size - trying removing both of them
-// how come we dont put go in front of createWorkerPool? is it because it calls its own goroutine worker, that waits for 10 urls to process
-// when does a deadlock occur? when another goroutine isnt reading the channel of buffered value, or if a goroutine is trying to read but its not written i think...buffered channel cannot exceed capacity or deadlock

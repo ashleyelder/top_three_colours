@@ -55,6 +55,10 @@ Project submission for [ code challenge](https://gist.github.com/ehmo/e736c827ca
 
 Improve writing testable code and writing tests. Benchmark tests to assess performance.
 
+Configurable number of workers as command line arguments using flags.Parse.
+
+Breakout code into separate files for readability.
+
 Graceful error handling, for instance when there is an issue like an empty line at the end of the input.txt file. Instead of returning `panic: runtime error: invalid memory address or nil pointer dereference` it could return a custom error message. For the sake of making my code more DRY I simply passed each default error message to the single checkError helper method. 
 
 ---
